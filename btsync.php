@@ -3,6 +3,7 @@
 /** 
  * BTSync - PHP Wrapper for the BitTorrent Sync API
  * @author Garet McKinley <garetmckinley@me.com>
+ * Pulled from https://github.com/iGARET/BTSync-PHP
  */
 class BTSync {
 
@@ -179,22 +180,43 @@ class BTSync {
 
 
 	/**
-	 * Generates read-write, read-only and encryption read-only secrets.
-	 * If ‘secret’ parameter is specified, will return secrets available 
-	 * for sharing under this secret.
-	 *
-	 * @param string $secret (Required) Folder secret
-	 * @param string $secret (Optional) If type=encrypted, generate secret with support of encrypted peer
+	* Generates read-write, read-only and encryption read-only secrets.
+	* If ‘secret’ parameter is specified, will return secrets available 
+	* for sharing under this secret.
+     	* 
+     	* Types of secrets available based on what type of secret was passed:
+     	* encrypted secret - can only generate the same encrypted secret
+     	* RO secret (original generated with encryption type) - can genereate RO and encrypted RO
+     	* RW secret (original genereated with encryption type) - can generate RW, RO and encrypted RO
+     	* RO secret (original generated WITHOUT encryption type) - can only generate same RO
+	 * RW secret (original generated WITHOUT encryption type) - can generate RW and RO 
+     	* 
+	 * @param string $secret (Optional) Folder secret
+	 * @param string $secret (Optional) If passed "encryption", generate secret with support of encrypted peer
 	 *
 	 * @return object Secrets
 	 */
-	public function getSecrets($secret, $type = null)
+	public function getSecrets($secret, $type)
 	{
-		if ($type == 'encrypted')
-			$result = $this->request(sprintf('method=get_secrets&secret=%s&type=%s', $secret, $type));
-		else
-			$result = $this->request(sprintf('method=get_secrets&secret=%s', $secret));
-		$array = json_decode($result);
+		if(strlen($secret) > 1 AND $type == "encryption"){
+            		//generate secrets based off supplied key ()
+			$result = $this->request(sprintf('method=get_secrets&secret=%s&type=%s', $secret, $type));		  
+		}//end if
+		elseif(strlen($secret) == 0 AND $type == "encryption"){
+            		//generate new set of RW, RO, and ENC_RO secrets
+			$result = $this->request(sprintf('method=get_secrets&type=%s', $type));
+		}//end elseif
+        	elseif(strlen($secret) > 1){
+            		//generate a regular RW and/or RO secret based on passed secret
+            	$result = $this->request(sprintf('method=get_secrets&secret=%s', $secret));
+        	}//end elseif
+        	else{
+            		//generate new set of RW and RO secrets
+            		$result = $this->request(sprintf('method=get_secrets'));
+        	}//end else
+            	//decode json to an array
+		$array = json_decode($result, true);
+		//return array of secrets
 		return $array;
 	}
 
